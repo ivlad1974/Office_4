@@ -100,7 +100,36 @@ tr.section-row td{background:var(--section)}
 input,select{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:4px;max-width:100%;background:var(--card);color:var(--txt)}
 table.grid.editable input{width:100%;box-sizing:border-box}
 input.num{width:90px;text-align:right}
-input.locked{background:var(--locked);color:var(--hint)}
+
+/* Данные, которые НЕ вводятся вручную (вычисляемые, формулы, заблокированные, спаны, disabled) — БЕЗ рамок и обводки */
+input:disabled,
+input[readonly],
+input.locked,
+select:disabled,
+.vol-readonly,
+.cell-readonly,
+.cell-computed,
+span.unit-badge,
+span.badge-type,
+td.cell-readonly,
+td.cell-computed {
+  border: none !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Эмуляция активной ячейки Excel при фокусе для редактируемых полей */
+table.grid.editable input:not(:disabled):not([readonly]):focus,
+table.grid.editable select:not(:disabled):focus,
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: 2px solid var(--acc) !important;
+  outline-offset: -1px;
+  box-shadow: 0 0 0 1px var(--acc);
+}
+
 th.unlock{background:var(--unlock)!important}
 /* Шапка КС-6: управление закрытием прямо в <th> */
 th.hmonth{min-width:110px;vertical-align:top}
@@ -792,65 +821,287 @@ body[data-theme^="hc-"] .sheet-badge.missing {
   width: 100%;
   table-layout: auto;
 }
-.excel-template-render table td,
-.excel-template-render table th {
-  padding: 3px 6px;
-  border: 1px solid #777;
-  color: #000;
-  background: #fff;
+/* ================= УНИФИЦИРОВАННЫЕ ФОРМЫ (КС-2, КС-3, КС-6) ПО ШАБЛОНУ EXCEL ================= */
+.excel-unified-doc {
+  background: #fff !important;
+  color: #000 !important;
+  font-family: Arial, 'Times New Roman', sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+  padding: 20px 24px;
+  margin: 12px auto;
+  max-width: 1050px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  border: 1px solid #c8d0dc;
 }
-.excel-template-render .tpl-hdr-box {
-  margin-bottom: 12px;
+.excel-unified-doc * {
+  box-sizing: border-box;
 }
-.excel-template-render .tpl-act-title {
-  text-align: center;
-  font-size: 16px;
-  font-weight: 700;
-  margin: 14px 0 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.excel-template-render .num {
+.excel-unified-doc .num {
   text-align: right;
   white-space: nowrap;
 }
-.excel-template-render .center {
+.excel-unified-doc .center {
   text-align: center;
 }
-.excel-template-render .bold {
+.excel-unified-doc .bold {
   font-weight: 700;
 }
 
-/* Печать по шаблону */
+/* Шапка документа: справа коды ОКУД/ОКПО, слева стороны */
+.doc-header-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 16px;
+}
+.doc-header-left {
+  flex: 1;
+  font-size: 11px;
+}
+.doc-party-line {
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.doc-party-lbl {
+  font-weight: 600;
+  color: #111;
+}
+.doc-party-val {
+  border-bottom: 1px solid #333;
+  padding-bottom: 1px;
+  font-weight: 500;
+}
+.doc-header-right {
+  width: 280px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.doc-form-title {
+  font-weight: 700;
+  font-size: 11px;
+}
+.doc-form-sub {
+  font-size: 9px;
+  color: #444;
+  margin-bottom: 6px;
+}
+.doc-code-table {
+  border-collapse: collapse;
+  margin-left: auto;
+  font-size: 10px;
+}
+.doc-code-table td {
+  padding: 1px 4px;
+  border: none;
+}
+.doc-code-table td.code-box-hdr {
+  border: 1px solid #000;
+  text-align: center;
+  font-weight: 700;
+  width: 75px;
+  background: #f8f8f8;
+}
+.doc-code-table td.code-box {
+  border: 1px solid #000;
+  text-align: center;
+  font-weight: 700;
+  width: 75px;
+}
+
+/* Заголовок акта и плашка номера */
+.doc-title-box {
+  margin: 10px 0 14px;
+  text-align: center;
+}
+.doc-act-number-table {
+  border-collapse: collapse;
+  margin: 0 auto 10px;
+  font-size: 10px;
+}
+.doc-act-number-table th,
+.doc-act-number-table td {
+  border: 1px solid #000;
+  padding: 2px 8px;
+  text-align: center;
+}
+.doc-act-number-table th {
+  background: #f2f2f2;
+  font-weight: 600;
+}
+.doc-act-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 4px 0;
+}
+
+/* Табличная сетка документов КС-2 / КС-3 / КС-6 */
+.doc-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 10.5px;
+}
+.doc-table-grid th,
+.doc-table-grid td {
+  border: 1px solid #000 !important;
+  padding: 3px 5px;
+  color: #000 !important;
+  background: transparent !important;
+}
+.doc-table-grid th {
+  background: #f7f7f7 !important;
+  font-weight: 700;
+  text-align: center;
+}
+.doc-table-grid tr.col-num-row th {
+  font-size: 9.5px;
+  background: #eee !important;
+  padding: 1px 4px;
+}
+.doc-table-grid tr.sec-hdr td {
+  font-weight: 700;
+  background: #f4f6fa !important;
+}
+.doc-table-grid tr.sec-sub td {
+  font-weight: 600;
+  font-style: italic;
+  background: #fafafa !important;
+}
+.doc-tot-lbl {
+  font-weight: 700;
+  text-align: right;
+  padding-right: 12px !important;
+}
+.doc-tot-val {
+  font-weight: 700;
+}
+
+/* Подписи */
+.doc-signs-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  margin-top: 20px;
+  page-break-inside: avoid;
+}
+.doc-sign-col {
+  flex: 1;
+  font-size: 11px;
+}
+.doc-sign-role {
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.doc-sign-firm {
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.doc-sign-line-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  border-bottom: 1px solid #000;
+  padding-bottom: 2px;
+}
+.doc-sign-post {
+  flex: 1;
+}
+.doc-sign-space {
+  width: 70px;
+}
+.doc-sign-fio {
+  font-weight: 600;
+}
+.doc-sign-sub {
+  font-size: 8.5px;
+  color: #444;
+  text-align: center;
+  margin-top: 2px;
+}
+.doc-sign-mp {
+  margin-top: 10px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Контейнер предварительного просмотра шаблона на экране */
+#ks2-doc, #ks3-doc {
+  background: transparent;
+  padding: 0;
+  border: none;
+  max-width: 100%;
+}
+
+/* Скрытый выделенный контейнер печати по шаблону */
+#excel-doc-print-area {
+  display: none;
+}
+
+/* ================= СТРОГАЯ ПЕЧАТЬ ПО ШАБЛОНУ EXCEL ================= */
 @media print {
-  body.printing-template .topbar,
-  body.printing-template #tabs,
-  body.printing-template .sheet-tabs,
-  body.printing-template .toolbar,
-  body.printing-template fieldset,
-  body.printing-template .obems-title,
-  body.printing-template .obems,
-  body.printing-template .hint,
-  body.printing-template .modal-backdrop,
-  body.printing-template #view-orders,
-  body.printing-template #view-sprav,
-  body.printing-template #view-kontr {
+  @page {
+    margin: 8mm 8mm 8mm 8mm;
+    size: auto;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt;
+  }
+  
+  /* Скрываем весь интерфейс приложения */
+  .topbar,
+  #tabs,
+  .sheet-tabs,
+  .toolbar,
+  .table-bottom-actions,
+  .hint,
+  .theme-ctl,
+  .toast,
+  .modal-backdrop,
+  #view-orders,
+  #view-sprav,
+  #view-kontr,
+  #panel-input,
+  #panel-materials,
+  #panel-smeta,
+  fieldset,
+  .obems-title,
+  .obems,
+  .sprav-window-switcher,
+  .badge-tag,
+  .tagline,
+  button,
+  select,
+  input {
     display: none !important;
   }
-  body.printing-template .excel-template-render {
-    border: none !important;
+
+  body.printing-template #view-editor,
+  body.printing-template .panel {
+    display: none !important;
+  }
+
+  /* Показываем строго документ по шаблону */
+  body.printing-template #excel-doc-print-area {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body.printing-template #excel-doc-print-area .excel-unified-doc {
     box-shadow: none !important;
+    border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
-    overflow: visible !important;
-  }
-  body.printing-template .excel-template-render table td,
-  body.printing-template .excel-template-render table th {
-    border-color: #000 !important;
-    color: #000 !important;
-    background: transparent !important;
   }
 }
 

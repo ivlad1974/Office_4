@@ -59,6 +59,31 @@ app.get('/api/templates/info', (req, res) => {
   }
 });
 
+// Отдать сам файл шаблона Excel
+app.get('/api/templates/file', (req, res) => {
+  try {
+    const candidates = [
+      path.join(TEMPLATES_DIR, 'Шаблоны документов.xlsx'),
+      path.join(PUBLIC_TEMPLATES_DIR, 'Шаблоны документов.xlsx'),
+      path.join(TEMPLATES_DIR, 'Шаблоны документов.xlsm'),
+      path.join(PUBLIC_TEMPLATES_DIR, 'Шаблоны документов.xlsm')
+    ];
+    let filePath = candidates.find(p => fs.existsSync(p));
+    if(!filePath){
+      const files = fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith('.xlsx') || f.endsWith('.xlsm'));
+      if(files.length > 0) filePath = path.join(TEMPLATES_DIR, files[0]);
+    }
+    if(!filePath){
+      return res.status(404).json({ error: 'Файл шаблона не найден' });
+    }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+    return res.sendFile(filePath);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Загрузить / обновить файл шаблонов
 app.post('/api/templates/upload', express.raw({ type: '*/*', limit: '50mb' }), (req, res) => {
   try {

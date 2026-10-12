@@ -69,9 +69,6 @@
     <button id="btn-redo-top" class="btn btn-sheet-redo" title="Повторить отмененное действие (Ctrl+Y)" disabled>↷ Повторить</button>
     <button id="btn-save-order" class="btn primary">💾 Сохранить</button>
     <button id="btn-clone-order" class="btn" title="Создать копию текущего заказа">⧉ Дублировать заказ</button>
-    <button id="btn-print-ks2" class="btn">🖨 Печать КС-2</button>
-    <button id="btn-print-ks3" class="btn">🖨 Печать КС-3</button>
-    <button id="btn-print-ks6" class="btn">🖨 Печать КС-6</button>
   </div>
 
   <div class="sheet-tabs" id="ed-tabs">
@@ -178,7 +175,7 @@
       <button class="btn mini btn-sheet-undo" title="Отменить последнее действие (Ctrl+Z)" disabled>↶ Отменить</button>
       <button class="btn mini btn-sheet-redo" title="Повторить последнее действие (Ctrl+Y)" disabled>↷ Повторить</button>
       <span class="divider-v"></span>
-      <button id="btn-print-ks6-tpl" class="btn primary mini" title="Печать КС-6 по шаблону Excel (Шаблоны/Шаблоны документов.xlsx)">🖨 Печать по шаблону Excel</button>
+      <button id="btn-print-ks6-tpl" class="btn primary mini" title="Печать КС-6 по шаблону Excel">🖨 Печать КС-6</button>
       <button id="btn-export-ks6-xlsx" class="btn mini" title="Скачать заполненный журнал КС-6 в Excel (.xlsx)">📥 Скачать в Excel (.xlsx)</button>
       <span class="divider-v"></span>
       <label>№ договора в КС-6:&nbsp;<input id="ks6-dogovor" class="mini" style="width:130px;"></label>&nbsp;
@@ -204,7 +201,7 @@
       <button class="btn mini btn-sheet-undo" title="Отменить последнее действие (Ctrl+Z)" disabled>↶ Отменить</button>
       <button class="btn mini btn-sheet-redo" title="Повторить последнее действие (Ctrl+Y)" disabled>↷ Повторить</button>
       <span class="divider-v"></span>
-      <button id="btn-print-ks2-tpl" class="btn primary mini" title="Печать КС-2 по шаблону Excel (Шаблоны/Шаблоны документов.xlsx)">🖨 Печать по шаблону Excel</button>
+      <button id="btn-print-ks2-tpl" class="btn primary mini" title="Печать КС-2 по шаблону Excel">🖨 Печать КС-2</button>
       <button id="btn-export-ks2-xlsx" class="btn mini" title="Скачать заполненный акт КС-2 в Excel (.xlsx)">📥 Скачать в Excel (.xlsx)</button>
       <span class="spacer"></span>
       <span id="ks2-tpl-status" class="tagline"></span>
@@ -225,7 +222,7 @@
       <button class="btn mini btn-sheet-undo" title="Отменить последнее действие (Ctrl+Z)" disabled>↶ Отменить</button>
       <button class="btn mini btn-sheet-redo" title="Повторить последнее действие (Ctrl+Y)" disabled>↷ Повторить</button>
       <span class="divider-v"></span>
-      <button id="btn-print-ks3-tpl" class="btn primary mini" title="Печать КС-3 по шаблону Excel (Шаблоны/Шаблоны документов.xlsx)">🖨 Печать по шаблону Excel</button>
+      <button id="btn-print-ks3-tpl" class="btn primary mini" title="Печать КС-3 по шаблону Excel">🖨 Печать КС-3</button>
       <button id="btn-export-ks3-xlsx" class="btn mini" title="Скачать заполненную справку КС-3 в Excel (.xlsx)">📥 Скачать в Excel (.xlsx)</button>
       <span class="spacer"></span>
       <span id="ks3-tpl-status" class="tagline"></span>
@@ -442,6 +439,8 @@
   </div>
 </div>
 </main>
+
+<div id="excel-doc-print-area"></div>
 
 <script src="js/xlsx.full.min.js"></script>
 <script src="js/data.js"></script>

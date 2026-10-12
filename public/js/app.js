@@ -1156,7 +1156,15 @@ function renderKs6(){
     let sum=0; months.forEach(m=>sum+=C.num(v['m'+m.i]));
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${p.pos}</td><td>${p.pos}</td><td>${esc(row.n)}</td><td>${esc(row.u||'')}</td><td class="num">${C.num(row.q)}</td>`+
-      months.map(m=>`<td><input class="num vol ${m.status==='Закрытие'?'':'locked'}" data-pos="${p.pos}" data-m="${m.i}" value="${v['m'+m.i]??''}" ${m.status==='Закрытие'?'':'disabled'}></td>`).join('')+
+      months.map(m=>{
+        const act = m.status === 'Закрытие';
+        const val = v['m' + m.i];
+        if(act){
+          return `<td><input class="num vol" data-pos="${p.pos}" data-m="${m.i}" value="${val ?? ''}"></td>`;
+        } else {
+          return `<td class="num cell-readonly">${val ? String(val) : ''}</td>`;
+        }
+      }).join('')+
       `<td class="num ${sum>C.num(row.q)?'over':''}">${sum>C.num(row.q)?'Превышение':C.num(row.q)-sum}</td>`;
     tb.appendChild(tr);
   });
@@ -1169,57 +1177,20 @@ function renderKs6(){
   });
 }
 
-/* ---- КС-2 документ ---- */
+/* ---- КС-2 документ (по шаблону Excel) ---- */
 function renderKs2Doc(){
+  if(!cur) return;
   C.calcKS2(cur);
-  const k=cur.ks2, cust=(store.customers.find(c=>c.list===cur.meta.customerList)||{});
-  const our=store.our.find(o=>o.list===cur.meta.org)||{};
-  let rowsHtml='';
-  k.lines.forEach(l=>{
-    if(l.type==='head') rowsHtml+=`<tr class="doc-head"><td colspan="5"><b>${esc(l.name)}</b></td><td></td><td></td></tr>`;
-    else rowsHtml+=`<tr><td>${l.pp}</td><td>${l.pos}</td><td>${esc(l.name)}</td><td>${esc(l.u||'')}</td>
-      <td class="num">${l.vol}</td><td class="num">${C.money(l.price)}</td><td class="num">${C.money(l.sum)}</td></tr>`;
-  });
-  $('#ks2-doc').innerHTML=`
-  <div class="doc-head-line">${C.fmtD(C.parseD(cur.meta.ks2date))} &nbsp;&nbsp; Унифицированная форма № КС-2, ОКУД 0322005</div>
-  <div>Заказчик (Генподрядчик) — ${esc(cust.name||cur.meta.customerList)}</div>
-  <div>Подрядчик (Субподрядчик) — ${esc(our.name||cur.meta.org)}</div>
-  <div>Стройка — ${esc(cur.meta.stroyka)}</div><div>Объект — ${esc(cur.meta.obekt)}</div>
-  <div>Договор подряда: ${esc(String(cur.meta.dogovorNum).replace(/\n/g,' '))} от ${cur.meta.dogovorDate||''}</div>
-  <h3 class="center">АКТ № ${k.docNum} О ПРИЕМКЕ ВЫПОЛНЕННЫХ РАБОТ</h3>
-  <div>Отчётный период: с ${C.fmtD(k.perFrom)} по ${C.fmtD(k.perTo)} &nbsp;|&nbsp; ${esc(k.restFormula)}</div>
-  <table class="grid doc-table"><thead><tr><th>п.п</th><th>поз.по калькуляции</th><th>Наименование работ</th><th>Ед.изм</th>
-   <th>Объём</th><th>Цена руб.</th><th>Стоимость руб.</th></tr></thead><tbody>${rowsHtml}</tbody>
-   <tfoot><tr><td colspan="6">Итого, в том числе:</td><td class="num">${C.money(k.total)}</td></tr>
-   <tr><td colspan="6">Работы</td><td class="num">${C.money(k.work)}</td></tr>
-   <tr><td colspan="6">Материалы</td><td class="num">${C.money(k.mat)}</td></tr>
-   <tr><td colspan="6"><b>Всего по акту</b></td><td class="num"><b>${C.money(k.total)}</b></td></tr>
-   <tr><td colspan="6">${k.ndsLabel}</td><td class="num">${C.money(k.nds)}</td></tr></tfoot></table>
-  <div class="signs"><div>Сдал: ${esc(our.sign||'')} — ${esc(our.post||'')} ${esc(our.fio||'')}</div>
-  <div>Принял: ${esc(cust.sign||cust.name||'')} — ${esc(cust.post||'')} ${esc(cust.fio||'')}</div></div>`;
+  const el = $('#ks2-doc');
+  if(el) el.innerHTML = buildKs2TemplateDocHtml(cur);
 }
 
-/* ---- КС-3 документ ---- */
+/* ---- КС-3 документ (по шаблону Excel) ---- */
 function renderKs3Doc(){
+  if(!cur) return;
   C.calcKS3(cur);
-  const x=cur.ks3, cust=(store.customers.find(c=>c.list===cur.meta.customerList)||{});
-  const our=store.our.find(o=>o.list===cur.meta.org)||{};
-  $('#ks3-doc').innerHTML=`
-  <div class="doc-head-line">Форма № КС-3, ОКУД 0322001 &nbsp; ${C.fmtD(C.parseD(cur.meta.ks2date))}</div>
-  <div>Инвестор: ${esc(cust.name||'')}</div><div>Подрядчик: ${esc(our.name||'')}</div>
-  <div>Контракт: ${esc(String(cur.meta.dogovorNum).replace(/\n/g,' '))} от ${cur.meta.dogovorDate||''}</div>
-  <h3 class="center">СПРАВКА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ № ${x.docNum}</h3>
-  <div>Отчётный период: с ${x.perFrom} по ${x.perTo}</div>
-  <table class="grid doc-table"><thead><tr><th>№ п/п</th><th>Наименование</th><th>с начала проведения работ</th>
-   <th>с начала года</th><th>в т.ч. за отчётный период</th></tr></thead><tbody>
-   <tr><td>1</td><td>Всего работ и затрат</td><td class="num">${C.money(x.fromStart)}</td><td class="num">${C.money(x.ytd)}</td><td class="num">${C.money(x.forPeriod-x.nds)}</td></tr>
-   <tr><td>1.1</td><td>${esc(String(cur.meta.obekt).slice(0,120))}</td><td class="num">${C.money(x.fromStart)}</td><td class="num">${C.money(x.ytd)}</td><td class="num">${C.money(x.forPeriod-x.nds)}</td></tr>
-   <tr><td></td><td><b>Итого</b></td><td></td><td></td><td class="num"><b>${C.money(x.forPeriod-x.nds)}</b></td></tr>
-   <tr><td></td><td>${x.labelNds}</td><td></td><td></td><td class="num">${C.money(x.nds)}</td></tr>
-   <tr><td></td><td><b>Всего с учетом НДС</b></td><td></td><td></td><td class="num"><b>${C.money(x.totalWithNds)}</b></td></tr>
-   </tbody></table>
-  <div class="signs"><div>Подрядчик: ${esc(our.sign||'')} ${esc(our.fio||'')}</div>
-  <div>Заказчик (генподрядчик): ${esc(cust.sign||cust.name||'')}</div></div>`;
+  const el = $('#ks3-doc');
+  if(el) el.innerHTML = buildKs3TemplateDocHtml(cur);
 }
 
 /* ---- Экспорт ---- */
@@ -1308,20 +1279,32 @@ async function loadTemplateWorkbook(arrayBuffer, fileName = 'Шаблоны до
 
 async function fetchTemplateFile(){
   try {
-    const infoRes = await fetch('/api/templates/info');
-    if(!infoRes.ok) return;
-    const info = await infoRes.json();
-    if(info.exists){
-      const fileUrl = `/${encodeURIComponent('Шаблоны')}/${encodeURIComponent(info.fileName || 'Шаблоны документов.xlsx')}`;
-      const fileRes = await fetch(fileUrl);
-      if(fileRes.ok){
-        const buf = await fileRes.arrayBuffer();
-        await loadTemplateWorkbook(buf, info.fileName || 'Шаблоны документов.xlsx');
+    let res = await fetch('/api/templates/file');
+    let fileName = 'Шаблоны документов.xlsx';
+    if(!res.ok){
+      const infoRes = await fetch('/api/templates/info');
+      if(infoRes.ok){
+        const info = await infoRes.json();
+        if(info.exists){
+          fileName = info.fileName || fileName;
+          const fileUrl = `/${encodeURIComponent('Шаблоны')}/${encodeURIComponent(fileName)}`;
+          res = await fetch(fileUrl);
+        }
       }
+    }
+    if(res && res.ok){
+      const buf = await res.arrayBuffer();
+      const success = await loadTemplateWorkbook(buf, fileName);
+      if(success && cur){
+        renderKs2Doc();
+        renderKs3Doc();
+      }
+      return true;
     }
   } catch(e){
     console.warn('Шаблоны Excel не удалось автоматически загрузить с сервера:', e);
   }
+  return false;
 }
 
 function updateTemplateUI(){
@@ -1392,7 +1375,395 @@ function setCell(ws, cellAddr, val, type = 's'){
   ws[cellAddr].w = String(val);
 }
 
-// Заполнение листа КС-2 данными текущего заказа
+/* ================= ГЕНЕРАЦИЯ ДОКУМЕНТОВ СТРОГО ПО ШАБЛОНУ EXCEL ================= */
+
+function buildKs2TemplateDocHtml(order){
+  if(!order) return '';
+  C.calcKS2(order);
+  const k = order.ks2;
+  const cust = store.customers.find(c => c.list === order.meta.customerList) || {};
+  const our = store.our.find(o => o.list === order.meta.org) || {};
+
+  let rowsHtml = '';
+  (k.lines || []).forEach(l => {
+    if(l.type === 'head'){
+      rowsHtml += `<tr class="sec-hdr">
+        <td class="center"><b>ЗАГ</b></td>
+        <td></td>
+        <td colspan="5"><b>${esc(l.name)}</b></td>
+      </tr>`;
+    } else {
+      rowsHtml += `<tr>
+        <td class="center">${l.pp}</td>
+        <td class="center">${l.pos}</td>
+        <td>${esc(l.name)}</td>
+        <td class="center">${esc(l.u || '')}</td>
+        <td class="num">${l.vol}</td>
+        <td class="num">${C.money(l.price)}</td>
+        <td class="num">${C.money(l.sum)}</td>
+      </tr>`;
+    }
+  });
+
+  return `
+    <div class="excel-unified-doc ks2-document">
+      <div class="doc-header-wrap">
+        <div class="doc-header-left">
+          <div class="doc-party-line"><span class="doc-party-lbl">Инвестор - </span> <span class="doc-party-val"></span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Заказчик (Генподрядчик) - </span> <span class="doc-party-val">${esc(cust.name || order.meta.customerList || '')}${cust.addr ? ', адрес: ' + esc(cust.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Подрядчик (Субподрядчик) - </span> <span class="doc-party-val">${esc(our.name || order.meta.org || '')}${our.addr ? ', адрес: ' + esc(our.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Стройка - </span> <span class="doc-party-val">${esc(order.meta.stroyka || '')}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Объект - </span> <span class="doc-party-val">${esc(order.meta.obekt || '')}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Вид деятельности по ОКДП</span> <span class="doc-party-val"></span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Договор подряда (контракт)</span> <span class="doc-party-val">номер ${esc(order.meta.dogovorNum || '')} от ${order.meta.dogovorDate || ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Вид операции</span> <span class="doc-party-val"></span></div>
+        </div>
+        <div class="doc-header-right">
+          <div class="doc-form-title">Унифицированная форма № КС-2</div>
+          <div class="doc-form-sub">Утверждена постановлением Госкомстата России от 11 ноября 1999 года № 100</div>
+          <table class="doc-code-table">
+            <tr><td></td><td class="code-box-hdr">Код</td></tr>
+            <tr><td>Форма по ОКУД</td><td class="code-box">0322005</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(cust.okpo || '')}</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(our.okpo || '')}</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box"></td></tr>
+            <tr><td>по ОКДП</td><td class="code-box"></td></tr>
+            <tr><td>номер</td><td class="code-box">${esc(order.meta.dogovorNum || '')}</td></tr>
+            <tr><td>дата</td><td class="code-box">${esc(order.meta.dogovorDate || '')}</td></tr>
+            <tr><td>Вид операции</td><td class="code-box"></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="doc-title-box">
+        <table class="doc-act-number-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Номер документа</th>
+              <th rowspan="2">Дата составления</th>
+              <th colspan="2">Отчетный период</th>
+            </tr>
+            <tr>
+              <th>с</th>
+              <th>по</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>${esc(k.docNum || '1')}</b></td>
+              <td>${C.fmtD(C.parseD(order.meta.ks2date))}</td>
+              <td>${C.fmtD(k.perFrom)}</td>
+              <td>${C.fmtD(k.perTo)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 class="doc-act-title">АКТ<br><span style="font-size:13pt; font-weight:normal;">О ПРИЕМКЕ ВЫПОЛНЕННЫХ РАБОТ</span></h2>
+      </div>
+
+      <table class="doc-table-grid">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:36px;">Номер п.п.</th>
+            <th rowspan="2" style="width:65px;">Номер поз. по калькуляции</th>
+            <th rowspan="2">Наименование работ</th>
+            <th rowspan="2" style="width:50px;">Ед. изм.</th>
+            <th colspan="3">Выполнено работ</th>
+          </tr>
+          <tr>
+            <th style="width:75px;">Количество</th>
+            <th style="width:90px;">Цена за единицу, руб.</th>
+            <th style="width:115px;">Стоимость, руб.</th>
+          </tr>
+          <tr class="col-num-row">
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml || '<tr><td colspan="7" class="center" style="padding:14px;">Нет закрытых позиций за выбранный отчетный период</td></tr>'}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="6" class="doc-tot-lbl">Итого, в том числе:</td><td class="num doc-tot-val">${C.money(k.total)}</td></tr>
+          <tr><td colspan="6" class="doc-tot-lbl">Работы</td><td class="num doc-tot-val">${C.money(k.work)}</td></tr>
+          <tr><td colspan="6" class="doc-tot-lbl">Материалы</td><td class="num doc-tot-val">${C.money(k.mat)}</td></tr>
+          <tr class="doc-tot-bold"><td colspan="6" class="doc-tot-lbl"><b>Всего по акту</b></td><td class="num doc-tot-val"><b>${C.money(k.total)}</b></td></tr>
+          <tr><td colspan="6" class="doc-tot-lbl">В т.ч. ${esc(k.ndsLabel || 'НДС 22%')}</td><td class="num doc-tot-val">${C.money(k.nds)}</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="doc-signs-grid">
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Сдал:</div>
+          <div class="doc-sign-firm">${esc(our.name || order.meta.org || '')}</div>
+          <div class="doc-sign-line-box">
+            <span class="doc-sign-post">${esc(our.post || 'Директор')}</span>
+            <span class="doc-sign-space">_________</span>
+            <span class="doc-sign-fio">${esc(our.fio || 'А. В. Старков')}</span>
+          </div>
+          <div class="doc-sign-sub">(должность, подпись, расшифровка подписи)</div>
+          <div class="doc-sign-mp">М.П.</div>
+        </div>
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Принял:</div>
+          <div class="doc-sign-firm">${esc(cust.name || order.meta.customerList || '')}</div>
+          <div class="doc-sign-line-box">
+            <span class="doc-sign-post">${esc(cust.post || 'Директор')}</span>
+            <span class="doc-sign-space">_________</span>
+            <span class="doc-sign-fio">${esc(cust.fio || '')}</span>
+          </div>
+          <div class="doc-sign-sub">(должность, подпись, расшифровка подписи)</div>
+          <div class="doc-sign-mp">М.П.</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildKs3TemplateDocHtml(order){
+  if(!order) return '';
+  C.calcKS3(order);
+  const x = order.ks3;
+  const cust = store.customers.find(c => c.list === order.meta.customerList) || {};
+  const our = store.our.find(o => o.list === order.meta.org) || {};
+
+  return `
+    <div class="excel-unified-doc ks3-document">
+      <div class="doc-header-wrap">
+        <div class="doc-header-left">
+          <div class="doc-party-line"><span class="doc-party-lbl">Инвестор: </span> <span class="doc-party-val"></span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Заказчик (Генподрядчик) - </span> <span class="doc-party-val">${esc(cust.name || order.meta.customerList || '')}${cust.addr ? ', адрес: ' + esc(cust.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Подрядчик (Субподрядчик) - </span> <span class="doc-party-val">${esc(our.name || order.meta.org || '')}${our.addr ? ', адрес: ' + esc(our.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Стройка - </span> <span class="doc-party-val">${esc(order.meta.stroyka || '')}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Вид деятельности по ОКДП</span> <span class="doc-party-val"></span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Контракт: </span> <span class="doc-party-val">номер ${esc(order.meta.dogovorNum || '')} от ${order.meta.dogovorDate || ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Вид операции</span> <span class="doc-party-val"></span></div>
+        </div>
+        <div class="doc-header-right">
+          <div class="doc-form-title">Унифицированная форма № КС-3</div>
+          <div class="doc-form-sub">Утверждена постановлением Госкомстата России от 11 ноября 1999 года № 100</div>
+          <table class="doc-code-table">
+            <tr><td></td><td class="code-box-hdr">Код</td></tr>
+            <tr><td>Форма по ОКУД</td><td class="code-box">0322001</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(cust.okpo || '')}</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(our.okpo || '')}</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box"></td></tr>
+            <tr><td>по ОКДП</td><td class="code-box"></td></tr>
+            <tr><td>номер</td><td class="code-box">${esc(order.meta.dogovorNum || '')}</td></tr>
+            <tr><td>дата</td><td class="code-box">${esc(order.meta.dogovorDate || '')}</td></tr>
+            <tr><td>Вид операции</td><td class="code-box"></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="doc-title-box">
+        <table class="doc-act-number-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Номер документа</th>
+              <th rowspan="2">Дата составления</th>
+              <th colspan="2">Отчетный период</th>
+            </tr>
+            <tr>
+              <th>с</th>
+              <th>по</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>${esc(x.docNum || '1')}</b></td>
+              <td>${C.fmtD(C.parseD(order.meta.ks2date))}</td>
+              <td>${esc(x.perFrom || '')}</td>
+              <td>${esc(x.perTo || '')}</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 class="doc-act-title">СПРАВКА<br><span style="font-size:13pt; font-weight:normal;">О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ</span></h2>
+      </div>
+
+      <table class="doc-table-grid">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:36px;">Номер п/п</th>
+            <th rowspan="2">Наименование пусковых комплексов, этапов, объектов, видов выполненных работ, оборудования, затрат</th>
+            <th rowspan="2" style="width:50px;">Код</th>
+            <th colspan="3">Стоимость выполненных работ и затрат, руб.</th>
+          </tr>
+          <tr>
+            <th style="width:130px;">с начала проведения работ</th>
+            <th style="width:130px;">с начала года</th>
+            <th style="width:140px;">в том числе за отчетный период</th>
+          </tr>
+          <tr class="col-num-row">
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="center">1</td>
+            <td><b>Всего работ и затрат, включаемых в стоимость работ в том числе:</b></td>
+            <td class="center"></td>
+            <td class="num">${C.money(x.fromStart)}</td>
+            <td class="num">${C.money(x.ytd)}</td>
+            <td class="num">${C.money(x.forPeriod - x.nds)}</td>
+          </tr>
+          <tr>
+            <td class="center">1.1.</td>
+            <td>Выполнение комплекса работ на объекте:<br><b>${esc(order.meta.obekt || '')}</b></td>
+            <td class="center"></td>
+            <td class="num">${C.money(x.fromStart)}</td>
+            <td class="num">${C.money(x.ytd)}</td>
+            <td class="num">${C.money(x.forPeriod - x.nds)}</td>
+          </tr>
+          <tr>
+            <td class="center"></td>
+            <td><b>Итого</b></td>
+            <td class="center"></td>
+            <td class="num"></td>
+            <td class="num"></td>
+            <td class="num"><b>${C.money(x.forPeriod - x.nds)}</b></td>
+          </tr>
+          <tr>
+            <td class="center"></td>
+            <td><b>${esc(x.ndsLabel || 'Сумма НДС 22%')}</b></td>
+            <td class="center"></td>
+            <td class="num"></td>
+            <td class="num"></td>
+            <td class="num"><b>${C.money(x.nds)}</b></td>
+          </tr>
+          <tr class="doc-tot-bold">
+            <td class="center"></td>
+            <td><b>Всего с учетом НДС</b></td>
+            <td class="center"></td>
+            <td class="num"></td>
+            <td class="num"></td>
+            <td class="num"><b>${C.money(x.totalWithNds)}</b></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="doc-signs-grid">
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Заказчик (генподрядчик):</div>
+          <div class="doc-sign-firm">${esc(cust.name || order.meta.customerList || '')}</div>
+          <div class="doc-sign-line-box">
+            <span class="doc-sign-space">_________</span>
+            <span class="doc-sign-fio">${esc(cust.fio || '')}</span>
+          </div>
+          <div class="doc-sign-sub">(должность, подпись, расшифровка подписи)</div>
+          <div class="doc-sign-mp">М.П.</div>
+        </div>
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Подрядчик (субподрядчик):</div>
+          <div class="doc-sign-firm">${esc(our.name || order.meta.org || '')}</div>
+          <div class="doc-sign-line-box">
+            <span class="doc-sign-space">_________</span>
+            <span class="doc-sign-fio">${esc(our.fio || 'А. В. Старков')}</span>
+          </div>
+          <div class="doc-sign-sub">(должность, подпись, расшифровка подписи)</div>
+          <div class="doc-sign-mp">М.П.</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildKs6TemplateDocHtml(order){
+  if(!order) return '';
+  C.calcSmeta(order);
+  const months = C.months(order);
+  const cust = store.customers.find(c => c.list === order.meta.customerList) || {};
+  const our = store.our.find(o => o.list === order.meta.org) || {};
+  const P = C.positions(order);
+
+  let rowsHtml = '';
+  order.rows.forEach((row, ri) => {
+    if(!row.t){
+      rowsHtml += `<tr class="sec-hdr"><td colspan="${6 + months.length}"><b>${esc(row.n)}</b></td></tr>`;
+      return;
+    }
+    const p = P.find(x => x.idx === ri);
+    if(!p) return;
+    const v = order.vols[p.pos] || {};
+    let sum = 0;
+    months.forEach(m => sum += C.num(v['m' + m.i]));
+    const rest = C.num(row.q) - sum;
+
+    rowsHtml += `<tr>
+      <td class="center">${p.pos}</td>
+      <td class="center">${p.pos}</td>
+      <td>${esc(row.n)}</td>
+      <td class="center">${esc(row.u || '')}</td>
+      <td class="num">${C.num(row.q)}</td>
+      ${months.map(m => {
+        const val = v['m' + m.i];
+        return `<td class="num">${val ? String(val) : ''}</td>`;
+      }).join('')}
+      <td class="num ${rest < 0 ? 'over' : ''}">${rest < 0 ? 'Превышение' : rest}</td>
+    </tr>`;
+  });
+
+  return `
+    <div class="excel-unified-doc ks6-document">
+      <div class="doc-header-wrap">
+        <div class="doc-header-left">
+          <div class="doc-party-line"><span class="doc-party-lbl">Заказчик: </span> <span class="doc-party-val">${esc(cust.name || order.meta.customerList || '')}${cust.addr ? ', адрес: ' + esc(cust.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Подрядчик: </span> <span class="doc-party-val">${esc(our.name || order.meta.org || '')}${our.addr ? ', адрес: ' + esc(our.addr) : ''}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Стройка: </span> <span class="doc-party-val">${esc(order.meta.stroyka || '')}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Объект: </span> <span class="doc-party-val">${esc(order.meta.obekt || '')}</span></div>
+          <div class="doc-party-line"><span class="doc-party-lbl">Договор подряда: </span> <span class="doc-party-val">номер ${esc(order.meta.dogovorNum || '')} от ${order.meta.dogovorDate || ''}</span></div>
+        </div>
+        <div class="doc-header-right">
+          <div class="doc-form-title">Унифицированная форма № КС-6</div>
+          <div class="doc-form-sub">Утверждена постановлением Госкомстата России от 30.10.1997 № 71а</div>
+          <table class="doc-code-table">
+            <tr><td></td><td class="code-box-hdr">Код</td></tr>
+            <tr><td>Форма по ОКУД</td><td class="code-box">0322006</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(cust.okpo || '')}</td></tr>
+            <tr><td>по ОКПО</td><td class="code-box">${esc(our.okpo || '')}</td></tr>
+            <tr><td>номер</td><td class="code-box">${esc(order.meta.dogovorNum || '')}</td></tr>
+            <tr><td>дата</td><td class="code-box">${esc(order.meta.dogovorDate || '')}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="doc-title-box">
+        <h2 class="doc-act-title">ЖУРНАЛ УЧЕТА ВЫПОЛНЕННЫХ РАБОТ<br><span style="font-size:12pt; font-weight:normal;">с начала строительства (Форма КС-6)</span></h2>
+      </div>
+
+      <table class="doc-table-grid">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:36px;">№ п/п</th>
+            <th rowspan="2" style="width:36px;">№ поз.</th>
+            <th rowspan="2">Наименование конструктивных элементов и видов работ</th>
+            <th rowspan="2" style="width:45px;">Ед. изм.</th>
+            <th rowspan="2" style="width:65px;">Кол-во по смете</th>
+            <th colspan="${months.length}">Выполнено по месяцам</th>
+            <th rowspan="2" style="width:65px;">Остаток</th>
+          </tr>
+          <tr>
+            ${months.map(m => `<th>${C.fmtMY(m.date)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <div class="doc-signs-grid">
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Составил:</div>
+          <div class="doc-sign-line-box"><span class="doc-sign-post">${esc(our.post || 'Инженер')}</span> <span class="doc-sign-space">_________</span> <span class="doc-sign-fio">${esc(our.fio || 'А. В. Старков')}</span></div>
+        </div>
+        <div class="doc-sign-col">
+          <div class="doc-sign-role">Проверил:</div>
+          <div class="doc-sign-line-box"><span class="doc-sign-post">${esc(cust.post || 'Куратор')}</span> <span class="doc-sign-space">_________</span> <span class="doc-sign-fio">${esc(cust.fio || '')}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Заполнение листа КС-2 для экспорта в Excel
 function getFilledKs2Worksheet(){
   if(!cur || !templateState.wb || !templateState.sheets.ks2) return null;
   C.calcKS2(cur);
@@ -1401,19 +1772,23 @@ function getFilledKs2Worksheet(){
   const our = store.our.find(o => o.list === cur.meta.org) || {};
 
   const origSheet = templateState.wb.Sheets[templateState.sheets.ks2];
-  const ws = JSON.parse(JSON.stringify(origSheet));
+  const ws = {};
+
+  // Копируем ячейки шапки (строки 1..25)
+  Object.keys(origSheet).forEach(key => {
+    if(key.startsWith('!')) return;
+    const r = parseInt(key.replace(/[A-Z]/g, ''));
+    if(r <= 25) ws[key] = { ...origSheet[key] };
+  });
 
   setCell(ws, 'B9', `Заказчик (Генподрядчик) -  ${cust.name || cur.meta.customerList || ''}${cust.addr ? ', адрес: ' + cust.addr : ''}`);
   if(cust.okpo) setCell(ws, 'F9', cust.okpo);
-
   setCell(ws, 'B10', `Подрядчик (Субподрядчик) -   ${our.name || cur.meta.org || ''}${our.addr ? ', адрес: ' + our.addr : ''}`);
   if(our.okpo) setCell(ws, 'F10', our.okpo);
-
   setCell(ws, 'D11', cur.meta.stroyka || '');
   setCell(ws, 'D12', cur.meta.obekt || '');
   setCell(ws, 'F14', ` № ${cur.meta.dogovorNum || ''}`);
   setCell(ws, 'F15', cur.meta.dogovorDate || '');
-
   setCell(ws, 'E20', k.docNum || '1');
   setCell(ws, 'F20', C.fmtD(C.parseD(cur.meta.ks2date)));
   setCell(ws, 'G20', C.fmtD(k.perFrom));
@@ -1436,11 +1811,29 @@ function getFilledKs2Worksheet(){
     rowIdx++;
   });
 
-  setCell(ws, `H${rowIdx}`, k.total, 'n');
+  setCell(ws, `B${rowIdx}`, 'Итого, в том числе:');
+  setCell(ws, `H${rowIdx}`, k.total, 'n'); rowIdx++;
+  setCell(ws, `B${rowIdx}`, 'Работы');
+  setCell(ws, `H${rowIdx}`, k.work, 'n'); rowIdx++;
+  setCell(ws, `B${rowIdx}`, 'Материалы');
+  setCell(ws, `H${rowIdx}`, k.mat, 'n'); rowIdx++;
+  setCell(ws, `B${rowIdx}`, 'Всего по акту');
+  setCell(ws, `H${rowIdx}`, k.total, 'n'); rowIdx++;
+  setCell(ws, `B${rowIdx}`, k.ndsLabel || 'В т.ч. НДС 22%');
+  setCell(ws, `H${rowIdx}`, k.nds, 'n'); rowIdx += 2;
+
+  setCell(ws, `C${rowIdx}`, 'Сдал:');
+  setCell(ws, `D${rowIdx}`, our.name || cur.meta.org || '');
+  setCell(ws, `H${rowIdx}`, our.fio || 'А. В. Старков'); rowIdx += 2;
+  setCell(ws, `C${rowIdx}`, 'Принял:');
+  setCell(ws, `D${rowIdx}`, cust.name || cur.meta.customerList || ''); rowIdx++;
+
+  ws['!ref'] = `A1:H${rowIdx}`;
+  ws['!merges'] = (origSheet['!merges'] || []).filter(m => m.e.r < 25);
   return ws;
 }
 
-// Заполнение листа КС-3 данными текущего заказа
+// Заполнение листа КС-3 для экспорта в Excel
 function getFilledKs3Worksheet(){
   if(!cur || !templateState.wb || !templateState.sheets.ks3) return null;
   C.calcKS3(cur);
@@ -1454,36 +1847,28 @@ function getFilledKs3Worksheet(){
   setCell(ws, 'A4', `Инвестор: ${cust.name || ''}`);
   setCell(ws, 'A5', `Заказчик (Генподрядчик) -  ${cust.name || cur.meta.customerList || ''}${cust.addr ? ', адрес: ' + cust.addr : ''}`);
   if(cust.okpo) setCell(ws, 'I5', cust.okpo);
-
   setCell(ws, 'A6', `Подрядчик (Субподрядчик) -   ${our.name || cur.meta.org || ''}${our.addr ? ', адрес: ' + our.addr : ''}`);
   if(our.okpo) setCell(ws, 'I6', our.okpo);
-
   setCell(ws, 'A7', `Стройка - ${cur.meta.stroyka || ''}`);
   setCell(ws, 'I9', ` № ${cur.meta.dogovorNum || ''}`);
-
   setCell(ws, 'E15', x.docNum || '1');
   setCell(ws, 'F15', C.fmtD(C.parseD(cur.meta.ks2date)));
   setCell(ws, 'H15', x.perFrom);
   setCell(ws, 'I15', x.perTo);
-
   setCell(ws, 'B23', cur.meta.obekt || '');
-
   setCell(ws, 'F22', x.fromStart, 'n');
   setCell(ws, 'H22', x.ytd, 'n');
   setCell(ws, 'I22', x.forPeriod - x.nds, 'n');
-
   setCell(ws, 'F23', x.fromStart, 'n');
   setCell(ws, 'H23', x.ytd, 'n');
   setCell(ws, 'I23', x.forPeriod - x.nds, 'n');
-
   setCell(ws, 'I24', x.forPeriod - x.nds, 'n');
   setCell(ws, 'I25', x.nds, 'n');
   setCell(ws, 'I26', x.totalWithNds, 'n');
-
   return ws;
 }
 
-// Заполнение листа КС-6 данными текущего заказа
+// Заполнение листа КС-6 для экспорта в Excel
 function getFilledKs6Worksheet(){
   if(!cur || !templateState.wb || !templateState.sheets.ks6) return null;
   const cust = store.customers.find(c => c.list === cur.meta.customerList) || {};
@@ -1494,108 +1879,52 @@ function getFilledKs6Worksheet(){
 
   setCell(ws, 'C3', `${cust.name || cur.meta.customerList || ''}${cust.addr ? ', адрес: ' + cust.addr : ''}`);
   if(cust.okpo) setCell(ws, 'M3', cust.okpo);
-
   setCell(ws, 'C5', `${our.name || cur.meta.org || ''}${our.addr ? ', адрес: ' + our.addr : ''}`);
   if(our.okpo) setCell(ws, 'M5', our.okpo);
-
   setCell(ws, 'C7', cur.meta.stroyka || '');
   setCell(ws, 'C9', cur.meta.obekt || '');
   setCell(ws, 'M13', ` № ${cur.meta.dogovorNum || ''}`);
   setCell(ws, 'M14', cur.meta.dogovorDate || '');
-
   return ws;
 }
 
-function renderWorksheetToHtml(ws, title = '', maxRows = 120){
-  if(!ws || !window.XLSX) return '';
-  const range = window.XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-  const maxR = Math.min(range.e.r, maxRows);
-  const trimmedRange = { s: { r: 0, c: 0 }, e: { r: maxR, c: Math.min(range.e.c, 25) } };
-  const tempWs = JSON.parse(JSON.stringify(ws));
-  tempWs['!ref'] = window.XLSX.utils.encode_range(trimmedRange);
-
-  const rawHtml = window.XLSX.utils.sheet_to_html(tempWs);
-  const match = rawHtml.match(/<table[\s\S]*<\/table>/i);
-  const tableContent = match ? match[0] : rawHtml;
-
-  return `
-    <div class="excel-template-render">
-      ${title ? `<div class="tpl-act-title">${esc(title)}</div>` : ''}
-      <div style="font-size:11px; color:#555; margin-bottom:8px; border-bottom:1px solid #ccc; padding-bottom:4px;">
-        📄 Сформировано по шаблону Excel: <b>${esc(templateState.fileName)}</b>
-      </div>
-      ${tableContent}
-    </div>
-  `;
-}
-
-function printByExcelTemplate(docType){
+/* Строгая печать по шаблону Excel: на экране ничего лишнего, только документ */
+async function printByExcelTemplate(docType){
   if(!cur) return toast('Откройте заказ');
   if(!templateState.loaded){
-    toast('Шаблон Excel не загружен, открыта стандартная печать');
-    window.print();
-    return;
+    toast('Загрузка шаблона Excel...');
+    await fetchTemplateFile();
   }
 
-  let filledWs = null;
-  let title = '';
-  let targetContainer = null;
-  let panelId = '';
-
+  let html = '';
   if(docType === 'ks2'){
-    filledWs = getFilledKs2Worksheet();
-    title = `АКТ № ${cur.ks2?.docNum || '1'} О ПРИЕМКЕ ВЫПОЛНЕННЫХ РАБОТ (Форма КС-2)`;
-    targetContainer = $('#ks2-doc');
-    panelId = 'panel-ks2';
+    html = buildKs2TemplateDocHtml(cur);
   } else if(docType === 'ks3'){
-    filledWs = getFilledKs3Worksheet();
-    title = `СПРАВКА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ № ${cur.ks3?.docNum || '1'} (Форма КС-3)`;
-    targetContainer = $('#ks3-doc');
-    panelId = 'panel-ks3';
+    html = buildKs3TemplateDocHtml(cur);
   } else if(docType === 'ks6'){
-    filledWs = getFilledKs6Worksheet();
-    title = `ЖУРНАЛ УЧЕТА ВЫПОЛНЕННЫХ РАБОТ (Форма КС-6)`;
-    panelId = 'panel-ks6';
+    html = buildKs6TemplateDocHtml(cur);
   }
 
-  if(!filledWs){
-    toast(`В шаблоне «${templateState.fileName}» не найден лист для ${docType.toUpperCase()}`);
+  if(!html){
+    return toast('Не удалось сформировать документ по шаблону');
+  }
+
+  let printArea = document.getElementById('excel-doc-print-area');
+  if(!printArea){
+    printArea = document.createElement('div');
+    printArea.id = 'excel-doc-print-area';
+    document.body.appendChild(printArea);
+  }
+  printArea.innerHTML = html;
+
+  document.body.classList.add('printing-template');
+  setTimeout(() => {
     window.print();
-    return;
-  }
-
-  const tplHtml = renderWorksheetToHtml(filledWs, title);
-
-  if(targetContainer){
-    targetContainer.innerHTML = tplHtml;
-    document.body.classList.add('printing-template');
-    $(`#${panelId}`)?.classList.add('printing-active');
     setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        document.body.classList.remove('printing-template');
-        $(`#${panelId}`)?.classList.remove('printing-active');
-      }, 500);
-    }, 50);
-  } else {
-    let tempDiv = document.getElementById('temp-ks6-tpl-print');
-    if(!tempDiv){
-      tempDiv = document.createElement('div');
-      tempDiv.id = 'temp-ks6-tpl-print';
-      $('#panel-ks6')?.appendChild(tempDiv);
-    }
-    tempDiv.innerHTML = tplHtml;
-    document.body.classList.add('printing-template');
-    $('#panel-ks6')?.classList.add('printing-active');
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        document.body.classList.remove('printing-template');
-        $('#panel-ks6')?.classList.remove('printing-active');
-        tempDiv.remove();
-      }, 500);
-    }, 50);
-  }
+      document.body.classList.remove('printing-template');
+      printArea.innerHTML = '';
+    }, 600);
+  }, 100);
 }
 
 function exportTemplateToExcel(docType){
@@ -2508,8 +2837,141 @@ let savedTheme='light'; try{savedTheme=localStorage.getItem('mes_theme')||'light
 if(!THEMES[savedTheme]) savedTheme='light';
 applyTheme(savedTheme);
 
+/* ================= НАВИГАЦИЯ КУРСОРА В СТИЛЕ EXCEL (Enter, стрелки, ячейки) ================= */
+function setupExcelNavigation(){
+  document.addEventListener('keydown', e => {
+    const key = e.key;
+    if(!['Enter', 'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(key)) return;
+
+    const target = e.target;
+    if(!target || !target.matches('input, select')) return;
+
+    // 1. Навигация внутри таблиц (материалы, КС-6, справочники)
+    const table = target.closest('table.grid, table');
+    const tr = target.closest('tr');
+
+    if(table && tr){
+      const tbody = tr.parentElement;
+      const allRows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('hidden') && r.offsetParent !== null);
+      const currentRowIdx = allRows.indexOf(tr);
+      if(currentRowIdx < 0) return;
+
+      const rowInputs = Array.from(tr.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+      const currentInputIdx = rowInputs.indexOf(target);
+
+      if(key === 'Enter' || key === 'ArrowDown'){
+        if(key === 'Enter' && e.shiftKey){
+          e.preventDefault();
+          if(currentRowIdx > 0){
+            const prevRow = allRows[currentRowIdx - 1];
+            const prevInputs = Array.from(prevRow.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+            if(prevInputs.length > 0){
+              const nextTarget = prevInputs[Math.min(currentInputIdx, prevInputs.length - 1)];
+              nextTarget.focus();
+              if(nextTarget.select) nextTarget.select();
+            }
+          }
+          return;
+        }
+
+        e.preventDefault();
+        if(currentRowIdx < allRows.length - 1){
+          const nextRow = allRows[currentRowIdx + 1];
+          const nextInputs = Array.from(nextRow.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+          if(nextInputs.length > 0){
+            const nextTarget = nextInputs[Math.min(currentInputIdx, nextInputs.length - 1)];
+            nextTarget.focus();
+            if(nextTarget.select) nextTarget.select();
+          }
+        } else if(key === 'Enter' && table.id === 'mat-table'){
+          doInsertRow(cur.rows.length, 'item');
+        }
+        return;
+      }
+
+      if(key === 'ArrowUp'){
+        e.preventDefault();
+        if(currentRowIdx > 0){
+          const prevRow = allRows[currentRowIdx - 1];
+          const prevInputs = Array.from(prevRow.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+          if(prevInputs.length > 0){
+            const nextTarget = prevInputs[Math.min(currentInputIdx, prevInputs.length - 1)];
+            nextTarget.focus();
+            if(nextTarget.select) nextTarget.select();
+          }
+        }
+        return;
+      }
+
+      if(key === 'ArrowRight'){
+        const isEnd = target.tagName === 'SELECT' || target.type === 'number' || (target.selectionStart === target.value.length) || target.selectionStart === null;
+        if(isEnd){
+          if(currentInputIdx < rowInputs.length - 1){
+            e.preventDefault();
+            const nextTarget = rowInputs[currentInputIdx + 1];
+            nextTarget.focus();
+            if(nextTarget.select) nextTarget.select();
+          } else if(currentRowIdx < allRows.length - 1){
+            e.preventDefault();
+            const nextRow = allRows[currentRowIdx + 1];
+            const nextInputs = Array.from(nextRow.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+            if(nextInputs.length > 0){
+              nextInputs[0].focus();
+              if(nextInputs[0].select) nextInputs[0].select();
+            }
+          }
+        }
+        return;
+      }
+
+      if(key === 'ArrowLeft'){
+        const isStart = target.tagName === 'SELECT' || target.type === 'number' || (target.selectionStart === 0 && target.selectionEnd === 0) || target.selectionStart === null;
+        if(isStart){
+          if(currentInputIdx > 0){
+            e.preventDefault();
+            const prevTarget = rowInputs[currentInputIdx - 1];
+            prevTarget.focus();
+            if(prevTarget.select) prevTarget.select();
+          } else if(currentRowIdx > 0){
+            e.preventDefault();
+            const prevRow = allRows[currentRowIdx - 1];
+            const prevInputs = Array.from(prevRow.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+            if(prevInputs.length > 0){
+              const lastTarget = prevInputs[prevInputs.length - 1];
+              lastTarget.focus();
+              if(lastTarget.select) lastTarget.select();
+            }
+          }
+        }
+        return;
+      }
+    }
+
+    // 2. Навигация внутри формы шапки (.form-grid)
+    const formGrid = target.closest('.form-grid');
+    if(formGrid){
+      const formInputs = Array.from(formGrid.querySelectorAll('input:not(:disabled):not([readonly]), select:not(:disabled)'));
+      const idx = formInputs.indexOf(target);
+      if(idx >= 0){
+        if(key === 'Enter' || key === 'ArrowDown'){
+          e.preventDefault();
+          const next = formInputs[(idx + 1) % formInputs.length];
+          next.focus();
+          if(next.select) next.select();
+        } else if(key === 'ArrowUp'){
+          e.preventDefault();
+          const prev = formInputs[(idx - 1 + formInputs.length) % formInputs.length];
+          prev.focus();
+          if(prev.select) prev.select();
+        }
+      }
+    }
+  });
+}
+
 loadStore(); renderOrders(); fillDatalists(); renderKontr();
 fetchTemplateFile(); // Автозагрузка шаблона Excel из папки «Шаблоны»
+setupExcelNavigation(); // Эмуляция навигации Excel по ячейкам
 /* отладка/тесты: доступ к внутреннему состоянию */
-window.__APP={get cur(){return cur},set cur(v){cur=v},store,rowClipboard:()=>rowClipboard,selRows,applyTheme,renderKontr,templateState,loadTemplateWorkbook,fetchTemplateFile};
+window.__APP={get cur(){return cur},set cur(v){cur=v},store,rowClipboard:()=>rowClipboard,selRows,applyTheme,renderKontr,templateState,loadTemplateWorkbook,fetchTemplateFile,setupExcelNavigation};
 })();
